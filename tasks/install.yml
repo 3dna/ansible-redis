@@ -14,15 +14,27 @@
     chdir: /usr/local/src/redis-{{ redis_version }}
     creates: /usr/local/src/redis-{{ redis_version }}/src/redis-server
 
+- name: check if redis_install_dir exists
+  stat:
+    path: "{{ redis_install_dir }}"
+  register: install_dir
+
 - name: create redis install directory
   file:
     path: "{{ redis_install_dir }}"
     state: directory
+  when: not install_dir.stat.exists
+
+- name: check if /etc/redis exists
+  stat:
+    path: /etc/redis
+  register: etc_dir
 
 - name: create /etc/redis
   file:
     path: /etc/redis
     state: directory
+  when: not etc_dir.stat.exists
 
 - name: check if redis user exists (ignore errors)
   command: id {{ redis_user }}
@@ -46,11 +58,17 @@
     system: yes
   when: user_exists|failed
 
+- name: check if /var/run/redis exists
+  stat:
+    path: /var/run/redis
+  register: var_run_redis
+
 - name: create /var/run/redis
   file:
     path: /var/run/redis
     state: directory
     owner: "{{ redis_user }}"
+  when: not var_run_redis.stat.exists
 
 - name: install redis
   command: make PREFIX={{ redis_install_dir }} install
